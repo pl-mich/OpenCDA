@@ -22,6 +22,12 @@ from opencda.core.plan.behavior_agent \
 from opencda.core.map.map_manager import MapManager
 from opencda.core.common.data_dumper import DataDumper
 
+# Algorithm customization
+
+from opencda.customize.core.sensing.localization.localization_manager \
+    import CustomizedLocalizationManager
+from opencda.customize.core.perception.perception_manager \
+    import CustomziedPeceptionManager
 
 class VehicleManager(object):
     """
@@ -96,13 +102,19 @@ class VehicleManager(object):
 
         # v2x module
         self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
+        
         # localization module
-        self.localizer = LocalizationManager(
-            vehicle, sensing_config['localization'], carla_map)
+        self.localizer = LocalizationManager(vehicle, sensing_config['localization'], carla_map)
+        # self.localizer = CustomizedLocalizationManager(vehicle, sensing_config['localization'], carla_map)
+        
         # perception module
         self.perception_manager = PerceptionManager(
             vehicle, sensing_config['perception'], cav_world,
             data_dumping)
+        # self.perception_manager = CustomizedPerceptionManager(
+        #     vehicle, sensing_config['perception'], cav_world,
+        #     data_dumping)
+        
         # map manager
         self.map_manager = MapManager(vehicle,
                                       carla_map,

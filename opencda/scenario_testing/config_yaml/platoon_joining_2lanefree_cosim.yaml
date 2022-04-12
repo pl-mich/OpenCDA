@@ -22,7 +22,9 @@ world:
     wetness: 0
 
 
-# First define the basic parameters of the vehicles
+# vehicle_base defines the default parameters for each CAV including perception, localization, planning, control, and v2x modules. The ampersand & character before vehicle_base is ued to to create a named anchor, which be referenced later on with an asterisk *.
+# I'm just going to provide default values for most of the attributes
+# So only ONE base vehicle "blueprint" is allowed
 vehicle_base: &vehicle_base
   sensing: &base_sensing
     perception: &base_perception
@@ -37,12 +39,14 @@ vehicle_base: &vehicle_base
         rotation_frequency: 20 # the simulation is 20 fps
         upper_fov: 10.0
         lower_fov: -30.0
+        # note that the following can change sensor noise and induce anomalies
         dropoff_general_rate: 0.0
         dropoff_intensity_limit: 1.0
         dropoff_zero_intensity: 0.0
         noise_stddev: 0.0
     localization: &base_localize
-      activate: true # when not activated, ego position will be retrieved from server directly
+    # I'm pretty sure some form of Kalman filter is included
+      activate: true # if true, the CAV will use gnss+imu+kf to get ego vehicle position. Otherwise, the CAV will load the ego position from server directly.
       dt: *delta # used for kalman filter
       gnss: # gnss sensor configuration
         noise_alt_stddev: 0.005
@@ -78,6 +82,7 @@ vehicle_base: &vehicle_base
       waypoint_update_freq: 9 # used to control waypoint updating frequency
       min_dist: 3 # used to pop out the waypoints too close to current location
       trajectory_dt: 0.25 # for every dt seconds, we sample a trajectory point from the trajectory path as next goal state
+      # the debug options may be helpful
       debug: false # whether to draw future/history waypoints
       debug_trajectory: false # whether to draw the trajectory points and path
 
@@ -124,18 +129,21 @@ platoon_base: &platoon_base
 
 
 # define scenario. In this scenario, a 4-vehicle platoon already exists.
+# Okay, this might be the toughest to work with
 scenario:
-  platoon_list:
+  platoon_list: # note that there is only ONE platoon
     - <<: *platoon_base
+      # common destination for all mambers of platoon
       destination: [1000.372955, 8.3, 0.3]
       members: # the first one is regarded as leader by default
         - <<: *vehicle_base
           spawn_position: [-350, 8.3, 0.3, 0, 0, 0] # x, y, z, roll, yaw, pitch
           sensing:
             <<: *base_sensing
-            perception:
+            perception: # DIFFERENT from default blueprint
               <<: *base_perception
               activate: false
+              # Only lead vehicle is equipped with camera, and its images are visualized through the GUI
               camera_visualize: 1
               camera_num: 1
               lidar_visualize: true
@@ -145,9 +153,9 @@ scenario:
             <<: *base_behavior
             local_planner:
               <<: *base_local_planner
-              debug_trajectory: true
+              debug_trajectory: true # plot trajectory on GUI
               debug: false
-        - <<: *vehicle_base
+        - <<: *vehicle_base # the three following vehicles are identical
           spawn_position: [-360, 8.3, 0.3, 0, 0, 0]
           platoon: # we need to add platoon specific params
             <<: *platoon_base
@@ -171,7 +179,7 @@ scenario:
               <<: *control_args
               max_throttle: 1.0
   single_cav_list: # this is for merging vehicle or single cav without v2x
-    - <<: *vehicle_base
+    - <<: *vehicle_base # one single merging CAV, all the rest of the traffic is handled by SUMO
       spawn_position: [-380, 4.8, 0.3, 0, 0, 0]
       # when this is defined, the above parameter will be ignored, and a special map function will
       # be used to define the spawn position based on the argument
@@ -201,5 +209,3 @@ scenario:
           <<: *base_local_planner
           debug_trajectory: true
           debug: false
-
-

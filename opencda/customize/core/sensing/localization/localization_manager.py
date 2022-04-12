@@ -29,10 +29,12 @@ class CustomizedLocalizationManager(LocalizationManager):
     """
 
     def __init__(self, vehicle, config_yaml, carla_map):
+        # Same idea: inherit everything that's useful from the parent class
         super(
             CustomizedLocalizationManager,
             self).__init__(
             vehicle,
             config_yaml,
             carla_map)
+        # and change whatever that has to be modified
         self.kf = ExtentedKalmanFilter(self.dt)
