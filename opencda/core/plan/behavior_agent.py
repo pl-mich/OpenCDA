@@ -354,7 +354,7 @@ class BehaviorAgent(object):
         WARNING: What follows is a proxy to avoid having a car brake after
         running a yellow light. This happens because the car is still under
         the influence of the semaphore, even after passing it.
-        So, the semaphore id is temporarely saved to ignore it and go around
+        So, the semaphore id is temporarily saved to ignore it and go around
         this issue, until the car is near a new one.
 
         Parameters
@@ -597,6 +597,7 @@ class BehaviorAgent(object):
 
         vehicle_speed = get_speed(vehicle)
 
+        # weighted average of multiple leading vehicle distances
         delta_v = max(1, (self._ego_speed - vehicle_speed) / 3.6)
         ttc = distance / delta_v if delta_v != 0 else distance / \
                                                       np.nextafter(0., 1.)
@@ -606,13 +607,16 @@ class BehaviorAgent(object):
             target_speed = min(positive(vehicle_speed - self.speed_decrease),
                                target_speed)
 
-        # Actual safety distance area, try to follow the speed of the vehicle
+        # Actual safety distance area, try to follow the speed of the vehicle(s)
         # in front.
         else:
             target_speed = 0 if vehicle_speed == 0 else \
                 min(vehicle_speed + 1,
                     target_speed)
         return target_speed
+
+        # BEWARE OF BOUNDARY CONDITIONS OF LEADING ONE/TWO/... VEHICLES
+        # MAYBE NOT MERGING
 
     def is_intersection(self, objects, waypoint_buffer):
         """

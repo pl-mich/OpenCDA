@@ -16,7 +16,7 @@ world:
     precipitation_deposits: 0 # Determines the creation of puddles. Values range from 0 to 100, being 0 none at all and 100 a road completely capped with water.
     wind_intensity: 0 # it will influence the rain
     fog_density: 0 # fog thickness, 100 is the largest
-    fog_distance: 0  # Fog start distance. Values range from 0 to infinite.
+    fog_distance: 0 # Fog start distance. Values range from 0 to infinite.
     fog_falloff: 0 # Density of the fog (as in specific mass) from 0 to infinity. The bigger the value, the more dense and heavy it will be, and the fog will reach smaller heights
     wetness: 0
 
@@ -55,7 +55,7 @@ vehicle_base: &vehicle_base
         y_scale: 10.0 # used to multiply with the y coordinate to make the error on y axis clearer
   map_manager: &base_map_manager
     pixels_per_meter: 2
-    raster_size: [ 224, 224 ]
+    raster_size: [224, 224]
     lane_sample_resolution: 0.1
     visualize: false
     activate: false
@@ -90,18 +90,17 @@ vehicle_base: &vehicle_base
         k_p: 0.37
         k_d: 0.024
         k_i: 0.032
-      dynamic: false # whether use dynamic pid setting
+      dynamic: false # whether use dynasmic pid setting
       dt: *delta # this should be equal to your simulation time-step
       max_brake: 1.0
       max_throttle: 1.0
       max_steering: 0.3
   v2x: &base_v2x # comminuation related
     enabled: true
-    communication_range: 35
-    v2v_count: 5
-    loc_noise: 0.0
-    yaw_noise: 0.0
-    speed_noise: 0.0
+    communication_range: 50
+    loc_noise: 100.0
+    yaw_noise: 100.0
+    speed_noise: 100.0
     lag: 0
 
 # define the platoon basic characteristics
@@ -111,23 +110,23 @@ platoon_base: &platoon_base
   open_gap: 1.2 # open gap
   warm_up_speed: 55 # required speed before cooperative merging
   change_leader_speed: true # whether to assign leader multiple speed to follow
-  leader_speeds_profile: [ 85, 95 ] # different speed for leader to follow
+  leader_speeds_profile: [85, 95] # different speed for leader to follow
   stage_duration: 10 # how long should the leader keeps in the current velocity stage
 
 # define the background traffic control by carla
 carla_traffic_manager:
-   sync_mode: true # has to be same as the world setting
-   global_distance: 4.0 # the minimum distance in meters that vehicles have to keep with the rest
-   # Sets the difference the vehicle's intended speed and its current speed limit.
-   #  Carla default speed is 30 km/h, so -100 represents 60 km/h,
-   # and 20 represents 24 km/h
-   global_speed_perc: -300
-   set_osm_mode: true # Enables or disables the OSM mode.
-   auto_lane_change: false
-   random: false # whether to random select vehicles' color and model
-   vehicle_list: []
-     # - spawn_position: [-1000.722836, 8.3, 0.3, 0, 0, 0]
-
+  sync_mode: true # has to be same as the world setting
+  global_distance: 4.0 # the minimum distance in meters that vehicles have to keep with the rest
+  # Sets the difference the vehicle's intended speed and its current speed limit.
+  #  Carla default speed is 30 km/h, so -100 represents 60 km/h,
+  # and 20 represents 24 km/h
+  global_speed_perc: -300
+  set_osm_mode: true # Enables or disables the OSM mode.
+  auto_lane_change: false
+  random: false # whether to random select vehicles' color and model
+  vehicle_list:
+    []
+    # - spawn_position: [-1000.722836, 8.3, 0.3, 0, 0, 0]
 
 # define scenario. In this scenario, a 4-vehicle platoon exists.
 # 4 agent speed to different speeds and stay at current speed before changing again.
@@ -162,4 +161,3 @@ scenario:
           spawn_position: [-1040.722836, 8.3, 0.3, 0, 0, 0]
           platoon: # we need to add platoon specific params
             <<: *platoon_base
-

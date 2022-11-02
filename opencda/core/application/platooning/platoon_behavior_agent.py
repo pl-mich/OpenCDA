@@ -314,7 +314,9 @@ class PlatooningBehaviorAgent(BehaviorAgent):
             The gap designed for platooning.
         """
 
+        # vehicle in front
         frontal_vehicle_manager, _ = self.v2x_manager.get_platoon_front_rear()
+        # second vehicle in front
         frontal_front_vehicle_manger, _ = \
             frontal_vehicle_manager.v2x_manager.get_platoon_front_rear()
 
@@ -329,7 +331,7 @@ class PlatooningBehaviorAgent(BehaviorAgent):
             # get front speed
             frontal_speed = frontal_vehicle_manager.agent._ego_speed
 
-            ego_trajetory = deque(maxlen=30)
+            ego_trajectory = deque(maxlen=30)
             ego_loc_x, ego_loc_y, ego_loc_z = \
                 self._ego_pos.location.x, \
                 self._ego_pos.location.y, \
@@ -339,7 +341,7 @@ class PlatooningBehaviorAgent(BehaviorAgent):
             ego_speed = self._ego_speed
 
             # compare speed with frontal veh
-            frontal_speedd_diff = ego_speed - frontal_speed
+            frontal_speed_diff = ego_speed - frontal_speed
 
             tracked_length = len(frontal_trajectory) - 1 \
                 if not frontal_front_vehicle_manger \
@@ -351,7 +353,7 @@ class PlatooningBehaviorAgent(BehaviorAgent):
                 # if leader is slowing down(leader target speed is smaller than
                 # current speed), use a bigger dt.
                 # spd diff max at 15. If diff greater than 8, increase dt
-                if frontal_speedd_diff > 3.0:
+                if frontal_speed_diff > 3.0:
                     '''
                     # only increase dt when V_ego > V_front (avoid collision)
                     # if V_ego < V_front (diff < 0), stick with small dt
@@ -364,7 +366,7 @@ class PlatooningBehaviorAgent(BehaviorAgent):
                     #      --> 4. {V_ego ~ V_front}: keep default
                                    dt to keep gap
                     '''
-                    delta_t = delta_t + frontal_speedd_diff * 0.0125
+                    delta_t = delta_t + frontal_speed_diff * 0.0125
 
                 if i == 0:
                     pos_x = (frontal_trajectory[i][0].location.x +
@@ -376,18 +378,18 @@ class PlatooningBehaviorAgent(BehaviorAgent):
                 else:
                     pos_x = (frontal_trajectory[i][0].location.x +
                              inter_gap / delta_t *
-                             ego_trajetory[i - 1][0].location.x) / \
+                             ego_trajectory[i - 1][0].location.x) / \
                             (1 + inter_gap / delta_t)
                     pos_y = (frontal_trajectory[i][0].location.y +
                              inter_gap / delta_t *
-                             ego_trajetory[i - 1][0].location.y) / \
+                             ego_trajectory[i - 1][0].location.y) / \
                             (1 + inter_gap / delta_t)
 
                 distance = np.sqrt((pos_x - ego_loc_x) **
                                    2 + (pos_y - ego_loc_y) ** 2)
                 velocity = distance / delta_t * 3.6
 
-                ego_trajetory.append([carla.Transform(
+                ego_trajectory.append([carla.Transform(
                     carla.Location(pos_x,
                                    pos_y,
                                    ego_loc_z)), velocity])
@@ -395,14 +397,14 @@ class PlatooningBehaviorAgent(BehaviorAgent):
                 ego_loc_x = pos_x
                 ego_loc_y = pos_y
 
-            if not ego_trajetory:
+            if not ego_trajectory:
                 wpt = self._map.get_waypoint(self._ego_pos.location)
                 next_wpt = wpt.next(max(2, int(self._ego_speed / 3.6 * 1)))[0]
-                ego_trajetory.append((next_wpt.transform,
+                ego_trajectory.append((next_wpt.transform,
                                       self._ego_speed))
 
             return self._local_planner.run_step(
-                [], [], [], trajectory=ego_trajetory)
+                [], [], [], trajectory=ego_trajectory)
 
     def platooning_merge_management(self, frontal_vehicle_vm):
         """

@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
+
 """
 Basic class of CAV
 """
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
 
 import uuid
 
@@ -22,6 +20,12 @@ from opencda.core.plan.behavior_agent \
 from opencda.core.map.map_manager import MapManager
 from opencda.core.common.data_dumper import DataDumper
 
+# custom localization
+# from opencda.customize.core.sensing.localization.localization_manager import CustomizedLocalizationManager
+
+from opencda.customize.core.platooning.platoon_behavior_agent \
+    import CustomizedPlatooningBehaviorAgent
+from opencda.customize.common.v2x_manager import CustomizedV2XManager
 
 class VehicleManager(object):
     """
@@ -94,11 +98,18 @@ class VehicleManager(object):
         control_config = config_yaml['controller']
         v2x_config = config_yaml['v2x']
 
-        # v2x module
-        self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
+        # customized localization module
+        # using ExtendedKalmanFilter
+        # self.localizer = CustomizedLocalizationManager(
+        #     vehicle, sensing_config['localization'], carla_map)
         # localization module
         self.localizer = LocalizationManager(
             vehicle, sensing_config['localization'], carla_map)
+
+        # v2x module
+        # self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
+        self.v2x_manager = CustomizedV2XManager(cav_world, v2x_config, self.vid)
+        
         # perception module
         self.perception_manager = PerceptionManager(
             vehicle, sensing_config['perception'], cav_world,
@@ -112,13 +123,21 @@ class VehicleManager(object):
         self.agent = None
         if 'platooning' in application:
             platoon_config = config_yaml['platoon']
-            self.agent = PlatooningBehaviorAgent(
+            # self.agent = PlatooningBehaviorAgent(
+            #     vehicle,
+            #     self,
+            #     self.v2x_manager,
+            #     behavior_config,
+            #     platoon_config,
+            #     carla_map)
+            self.agent = CustomizedPlatooningBehaviorAgent(
                 vehicle,
                 self,
                 self.v2x_manager,
                 behavior_config,
                 platoon_config,
                 carla_map)
+
         else:
             self.agent = BehaviorAgent(vehicle, carla_map, behavior_config)
 

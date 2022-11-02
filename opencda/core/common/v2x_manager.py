@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-"""Communication manager for cooperation
+"""
+Communication manager for cooperation
 """
 # Author: Runsheng Xu <rxx3386@ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
@@ -152,6 +153,7 @@ class V2XManager(object):
         """
         Search the CAVs nearby.
         """
+        # Iterate through all CAVs
         vehicle_manager_dict = self.cav_world.get_vehicle_managers()
 
         for vid, vm in vehicle_manager_dict.items():
@@ -233,7 +235,7 @@ class V2XManager(object):
         vm : opencda object
             The target vehicle manager.
         """
-        self.platooning_plugin.rear_vechile = vm
+        self.platooning_plugin.rear_vehicle = vm
 
     def add_platoon_blacklist(self, pmid):
         """
@@ -277,7 +279,7 @@ class V2XManager(object):
             The ego vehicle's in team id.
         """
         return self.platooning_plugin.platooning_object, \
-               self.platooning_plugin.in_id
+            self.platooning_plugin.in_id
 
     def get_platoon_status(self):
         """
@@ -303,4 +305,4 @@ class V2XManager(object):
             Rear vehicle of the ego vehicle in the platoon.
         """
         return self.platooning_plugin.front_vehicle, \
-               self.platooning_plugin.rear_vechile
+            self.platooning_plugin.rear_vehicle
