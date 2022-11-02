@@ -1,4 +1,3 @@
-
 """
 Basic class of CAV
 """
@@ -7,7 +6,7 @@ import uuid
 
 from opencda.core.actuation.control_manager \
     import ControlManager
-from opencda.core.application.platooning.platoon_behavior_agent\
+from opencda.core.application.platooning.platoon_behavior_agent \
     import PlatooningBehaviorAgent
 from opencda.core.common.v2x_manager \
     import V2XManager
@@ -26,6 +25,7 @@ from opencda.core.common.data_dumper import DataDumper
 from opencda.customize.core.platooning.platoon_behavior_agent \
     import CustomizedPlatooningBehaviorAgent
 from opencda.customize.common.v2x_manager import CustomizedV2XManager
+
 
 class VehicleManager(object):
     """
@@ -109,7 +109,7 @@ class VehicleManager(object):
         # v2x module
         # self.v2x_manager = V2XManager(cav_world, v2x_config, self.vid)
         self.v2x_manager = CustomizedV2XManager(cav_world, v2x_config, self.vid)
-        
+
         # perception module
         self.perception_manager = PerceptionManager(
             vehicle, sensing_config['perception'], cav_world,
@@ -123,20 +123,20 @@ class VehicleManager(object):
         self.agent = None
         if 'platooning' in application:
             platoon_config = config_yaml['platoon']
-            # self.agent = PlatooningBehaviorAgent(
-            #     vehicle,
-            #     self,
-            #     self.v2x_manager,
-            #     behavior_config,
-            #     platoon_config,
-            #     carla_map)
-            self.agent = CustomizedPlatooningBehaviorAgent(
+            self.agent = PlatooningBehaviorAgent(
                 vehicle,
                 self,
                 self.v2x_manager,
                 behavior_config,
                 platoon_config,
                 carla_map)
+            # self.agent = CustomizedPlatooningBehaviorAgent(
+            #     vehicle,
+            #     self,
+            #     self.v2x_manager,
+            #     behavior_config,
+            #     platoon_config,
+            #     carla_map)
 
         else:
             self.agent = BehaviorAgent(vehicle, carla_map, behavior_config)
