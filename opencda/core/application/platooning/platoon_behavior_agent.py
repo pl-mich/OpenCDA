@@ -311,13 +311,14 @@ class PlatooningBehaviorAgent(BehaviorAgent):
         Parameters
         __________
         inter_gap : float
-            The gap designed for platooning.
+            The intervehicular time gap designed for platooning.
+            MAY NOT BE RELEVANT IN CIDM CONTROL LOGIC
         """
 
         # vehicle in front
         frontal_vehicle_manager, _ = self.v2x_manager.get_platoon_front_rear()
         # second vehicle in front
-        frontal_front_vehicle_manger, _ = \
+        frontal_front_vehicle_manager, _ = \
             frontal_vehicle_manager.v2x_manager.get_platoon_front_rear()
 
         if len(self._local_planner.get_trajectory()
@@ -344,12 +345,13 @@ class PlatooningBehaviorAgent(BehaviorAgent):
             frontal_speed_diff = ego_speed - frontal_speed
 
             tracked_length = len(frontal_trajectory) - 1 \
-                if not frontal_front_vehicle_manger \
+                if not frontal_front_vehicle_manager \
                 else len(frontal_trajectory)
 
             # todo: current not working well on curve
             for i in range(tracked_length):
                 delta_t = self.get_local_planner().dt
+
                 # if leader is slowing down(leader target speed is smaller than
                 # current speed), use a bigger dt.
                 # spd diff max at 15. If diff greater than 8, increase dt
@@ -369,31 +371,26 @@ class PlatooningBehaviorAgent(BehaviorAgent):
                     delta_t = delta_t + frontal_speed_diff * 0.0125
 
                 if i == 0:
-                    pos_x = (frontal_trajectory[i][0].location.x +
-                             inter_gap / delta_t * ego_loc_x) / (
-                                    1 + inter_gap / delta_t)
-                    pos_y = (frontal_trajectory[i][0].location.y +
-                             inter_gap / delta_t * ego_loc_y) / (
-                                    1 + inter_gap / delta_t)
+                    pos_x = (frontal_trajectory[i][0].location.x + inter_gap / delta_t * ego_loc_x) / \
+                        (1 + inter_gap / delta_t)
+                    pos_y = (frontal_trajectory[i][0].location.y + inter_gap / delta_t * ego_loc_y) / \
+                        (1 + inter_gap / delta_t)
                 else:
                     pos_x = (frontal_trajectory[i][0].location.x +
-                             inter_gap / delta_t *
-                             ego_trajectory[i - 1][0].location.x) / \
+                             inter_gap / delta_t * ego_trajectory[i - 1][0].location.x) / \
                             (1 + inter_gap / delta_t)
                     pos_y = (frontal_trajectory[i][0].location.y +
-                             inter_gap / delta_t *
-                             ego_trajectory[i - 1][0].location.y) / \
+                             inter_gap / delta_t * ego_trajectory[i - 1][0].location.y) / \
                             (1 + inter_gap / delta_t)
 
-                distance = np.sqrt((pos_x - ego_loc_x) **
-                                   2 + (pos_y - ego_loc_y) ** 2)
+                distance = np.sqrt((pos_x - ego_loc_x) ** 2 + (pos_y - ego_loc_y) ** 2)
+                # where did 3.6 come from
                 velocity = distance / delta_t * 3.6
 
-                ego_trajectory.append([carla.Transform(
-                    carla.Location(pos_x,
-                                   pos_y,
-                                   ego_loc_z)), velocity])
+                # maintain z coord and update x and y coordinates
+                ego_trajectory.append([carla.Transform(carla.Location(pos_x, pos_y, ego_loc_z)), velocity])
 
+                # update ego x and y coordinates
                 ego_loc_x = pos_x
                 ego_loc_y = pos_y
 
