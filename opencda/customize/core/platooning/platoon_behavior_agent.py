@@ -161,8 +161,7 @@ class CustomizedPlatooningBehaviorAgent(PlatooningBehaviorAgent):
 
     def cooperative_platooning_following_manager(self, inter_gap):
         """
-        Extend the Gazis-Herman-Rothery car-following model (which I assumed is being used here)
-
+        Extend the Gazis-Herman-Rothery car-following model
 
         Parameters
         __________
@@ -172,19 +171,33 @@ class CustomizedPlatooningBehaviorAgent(PlatooningBehaviorAgent):
         """
 
         # vehicle in front
-        frontal_vehicle_manager, _ = self.v2x_manager.get_platoon_front_rear()
-        # second vehicle in front
-        frontal_front_vehicle_manager, _ = \
-            frontal_vehicle_manager.v2x_manager.get_platoon_front_rear()
+        frontal_vehicle_managers, _ = self.v2x_manager.get_platoon_front_rear_mult()
+        # vehicle in front
+        frontal_vehicle_manager = frontal_vehicle_managers[0] \
+            if len(frontal_vehicle_managers) >= 1 else None
 
+        # we are not updating trajectories when update time step has not been reached
         if len(self._local_planner.get_trajectory()
                ) > self.get_local_planner().trajectory_update_freq - 2:
             return self._local_planner.run_step([], [], [], following=True)
 
+        frontal_trajectories, frontal_speeds, tracked_lengths = [], [], []
+        for mgr in frontal_vehicle_managers:
+            if mgr:
+                frontal_trajectories.append(mgr.agent.get_local_planner().get_trajectory())
+                frontal_speeds.append(mgr.agent._ego_speed)
+
+        for i, traj in enumerate(frontal_trajectories):
+            tracked_len = len(traj) - 1 \
+                if not frontal_vehicle_managers[i + 1] else len(traj)
+            tracked_lengths.append(tracked_len)
+
         # this agent is a behavior agent
-        frontal_trajectory = frontal_vehicle_manager.agent.get_local_planner().get_trajectory()
+        # frontal_trajectory = frontal_trajectories[0]
         # get front speed
-        frontal_speed = frontal_vehicle_manager.agent._ego_speed
+        # frontal_speed = frontal_speeds[0]
+        tracked_length = tracked_lengths[0]
+
         ego_trajectory = deque(maxlen=30)
         ego_loc_x, ego_loc_y, ego_loc_z = \
             self._ego_pos.location.x, \
@@ -195,40 +208,40 @@ class CustomizedPlatooningBehaviorAgent(PlatooningBehaviorAgent):
         ego_speed = self._ego_speed
 
         # compare speed with frontal veh
-        frontal_speed_diff = ego_speed - frontal_speed
+        frontal_speed_diffs = np.asarray([ego_speed - f_spd for f_spd in frontal_speeds])
 
-        tracked_length = len(frontal_trajectory) - 1 \
-            if not frontal_front_vehicle_manager \
-            else len(frontal_trajectory)
-
-        # todo: current not working well on curve
-        frontal_x, frontal_y = None, None
-        prev_ego_x, prev_ego_y = None, None
-        c = 0.5
+        c = 0.5 # maybe turn this into a parameter?
         prev_vel = None
+        weights = np.arange(len(frontal_trajectories))
+        summed = np.sum(weights)
+        weights = weights[::-1] / summed
+
         for i in range(tracked_length):
             delta_t = self.get_local_planner().dt
 
+            # THIS CAN'T HURT, RIGHT?
             # if leader is slowing down(leader target speed is smaller than
             # current speed), use a bigger dt.
             # spd diff max at 15. If diff greater than 8, increase dt
-            # if frontal_speed_diff > 3.0:
-            #     '''
-            #     # only increase dt when V_ego > V_front (avoid collision)
-            #     # if V_ego < V_front (diff < 0), stick with small dt
-            #     # todo: change delta_t to a function:
-            #     #      --> 1. {V_ego > V_front}: decrease dt to increase
-            #                   gap, help avoid collision
-            #     #      --> 2. more difference, more dt adjustment
-            #     #      --> 3. {V_ego < V_front}: will not collide,
-            #                   keep default dt to keep gap
-            #     #      --> 4. {V_ego ~ V_front}: keep default
-            #                    dt to keep gap
-            #     '''
-            #     delta_t = delta_t + frontal_speed_diff * 0.0125
+            if frontal_speed_diffs[0] > 3.0:
+                '''
+                # only increase dt when V_ego > V_front (avoid collision)
+                # if V_ego < V_front (diff < 0), stick with small dt
+                # todo: change delta_t to a function:
+                #      --> 1. {V_ego > V_front}: decrease dt to increase
+                              gap, help avoid collision
+                #      --> 2. more difference, more dt adjustment
+                #      --> 3. {V_ego < V_front}: will not collide,
+                              keep default dt to keep gap
+                #      --> 4. {V_ego ~ V_front}: keep default
+                               dt to keep gap
+                '''
+                delta_t = delta_t + frontal_speed_diffs[0] * 0.0125
 
-            frontal_x = frontal_trajectory[i][0].location.x
-            frontal_y = frontal_trajectory[i][0].location.y
+            frontal_xs = [traj[i][0].location.x for traj in frontal_trajectories]
+            frontal_ys = [traj[i][0].location.y for traj in frontal_trajectories]
+            frontal_x = frontal_xs[0]
+            frontal_y = frontal_ys[0]
 
             if i == 0:
                 pos_x = (frontal_x + inter_gap / delta_t * ego_loc_x) / \
@@ -238,26 +251,22 @@ class CustomizedPlatooningBehaviorAgent(PlatooningBehaviorAgent):
                 distance = math.sqrt((pos_x - ego_loc_x) ** 2 + (pos_y - ego_loc_y) ** 2)
                 velocity = distance / delta_t * 3.6
             else:
-                x_diff = abs(ego_loc_x - frontal_x)
-                y_diff = abs(ego_loc_y - frontal_y)
-                # okay I admit this is probably not the best call
-                # BUT IT FUCKING WORKS!
-                orientation = math.atan2(y_diff, x_diff)
-                spacing = math.sqrt(x_diff ** 2 + y_diff ** 2)
-                accel = 0.5 * frontal_speed_diff / spacing
-                velocity = prev_vel + accel * delta_t
-                distance = velocity * delta_t
-                pos_x = ego_loc_x + distance * math.cos(orientation)
-                pos_y = ego_loc_y + distance * math.sin(orientation)
-                # prev_ego_x = ego_trajectory[i - 1][0].location.x
-                # prev_ego_y = ego_trajectory[i - 1][0].location.y
-                # pos_x = (frontal_x + inter_gap / delta_t * prev_ego_x) / \
-                #         (1 + inter_gap / delta_t)
-                # pos_y = (frontal_y + inter_gap / delta_t * prev_ego_y) / \
-                #         (1 + inter_gap / delta_t)
+                # use only one preceding vehicle to determine orientation
+                x_diffs = np.asarray([fx - ego_loc_x for fx in frontal_xs])
+                y_diffs = np.asarray([fy - ego_loc_y for fy in frontal_ys])
+                x_diff = x_diffs[0]
+                y_diff = y_diffs[0]
+                orientation = math.atan2(y_diff, x_diff) # orientation of frontal vehicle trajectory
 
-            # distance = np.sqrt((pos_x - ego_loc_x) ** 2 + (pos_y - ego_loc_y) ** 2)
-            # velocity = distance / delta_t * 3.6
+                spacings = np.sqrt(np.square(x_diffs) + np.square(y_diffs))
+
+                accels = c * frontal_speed_diffs / spacings  # desired acceleration over next time step
+                accel = np.average(accels, weights=np.arange(accels.shape[0], 0, -1))
+
+                velocity = prev_vel + accel * delta_t # desired velocity over next time step
+                distance = velocity * delta_t # distance traveled over next time step
+                pos_x = ego_loc_x + distance * math.cos(orientation) # next x coordinate
+                pos_y = ego_loc_y + distance * math.sin(orientation) # next y coordinate
 
             # we should have the pos_x, pos_y, and velocity for this time step
             # maintain z coord and update x and y coordinates
